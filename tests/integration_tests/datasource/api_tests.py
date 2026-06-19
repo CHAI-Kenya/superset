@@ -41,7 +41,7 @@ class TestDatasourceApi(SupersetTestCase):
         self.login(ADMIN_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col1/values/")
-        self.assertEqual(rv.status_code, 200)
+        assert rv.status_code == 200
         response = json.loads(rv.data.decode("utf-8"))
         for val in range(10):
             assert val in response["result"]
@@ -51,7 +51,7 @@ class TestDatasourceApi(SupersetTestCase):
         self.login(ADMIN_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col2/values/")
-        self.assertEqual(rv.status_code, 200)
+        assert rv.status_code == 200
         response = json.loads(rv.data.decode("utf-8"))
         for val in ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]:
             assert val in response["result"]
@@ -61,7 +61,7 @@ class TestDatasourceApi(SupersetTestCase):
         self.login(ADMIN_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col3/values/")
-        self.assertEqual(rv.status_code, 200)
+        assert rv.status_code == 200
         response = json.loads(rv.data.decode("utf-8"))
         for val in [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]:
             assert val in response["result"]
@@ -71,16 +71,16 @@ class TestDatasourceApi(SupersetTestCase):
         self.login(ADMIN_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col4/values/")
-        self.assertEqual(rv.status_code, 200)
+        assert rv.status_code == 200
         response = json.loads(rv.data.decode("utf-8"))
-        self.assertEqual(response["result"], [None])
+        assert response["result"] == [None]
 
     @pytest.mark.usefixtures("app_context", "virtual_dataset")
     def test_get_column_values_integers_with_nulls(self):
         self.login(ADMIN_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col6/values/")
-        self.assertEqual(rv.status_code, 200)
+        assert rv.status_code == 200
         response = json.loads(rv.data.decode("utf-8"))
         for val in [1, None, 3, 4, 5, 6, 7, 8, 9, 10]:
             assert val in response["result"]
@@ -92,27 +92,27 @@ class TestDatasourceApi(SupersetTestCase):
         rv = self.client.get(
             f"api/v1/datasource/not_table/{table.id}/column/col1/values/"
         )
-        self.assertEqual(rv.status_code, 400)
+        assert rv.status_code == 400
         response = json.loads(rv.data.decode("utf-8"))
-        self.assertEqual(response["message"], "Invalid datasource type: not_table")
+        assert response["message"] == "Invalid datasource type: not_table"
 
     @patch("superset.datasource.api.DatasourceDAO.get_datasource")
     def test_get_column_values_datasource_type_not_supported(self, get_datasource_mock):
         get_datasource_mock.side_effect = DatasourceTypeNotSupportedError
         self.login(ADMIN_USERNAME)
         rv = self.client.get("api/v1/datasource/table/1/column/col1/values/")
-        self.assertEqual(rv.status_code, 400)
+        assert rv.status_code == 400
         response = json.loads(rv.data.decode("utf-8"))
-        self.assertEqual(
-            response["message"], "DAO datasource query source type is not supported"
+        assert (
+            response["message"] == "DAO datasource query source type is not supported"
         )
 
     def test_get_column_values_datasource_not_found(self):
         self.login(ADMIN_USERNAME)
         rv = self.client.get("api/v1/datasource/table/999/column/col1/values/")
-        self.assertEqual(rv.status_code, 404)
+        assert rv.status_code == 404
         response = json.loads(rv.data.decode("utf-8"))
-        self.assertEqual(response["message"], "Datasource does not exist")
+        assert response["message"] == "Datasource does not exist"
 
     @pytest.mark.usefixtures("app_context", "virtual_dataset")
     def test_get_column_values_no_datasource_access(self):
@@ -126,12 +126,11 @@ class TestDatasourceApi(SupersetTestCase):
         self.login(GAMMA_USERNAME)
         table = self.get_virtual_dataset()
         rv = self.client.get(f"api/v1/datasource/table/{table.id}/column/col1/values/")
-        self.assertEqual(rv.status_code, 403)
+        assert rv.status_code == 403
         response = json.loads(rv.data.decode("utf-8"))
-        self.assertEqual(
-            response["message"],
-            f"This endpoint requires the datasource {table.id}, "
-            "database or `all_datasource_access` permission",
+        assert (
+            response["message"] == f"This endpoint requires the datasource {table.id}, "
+            "database or `all_datasource_access` permission"
         )
 
     @pytest.mark.usefixtures("app_context", "virtual_dataset")
@@ -188,9 +187,9 @@ class TestDatasourceApi(SupersetTestCase):
             rv = self.client.get(
                 f"api/v1/datasource/table/{table.id}/column/col2/values/"
             )
-            self.assertEqual(rv.status_code, 200)
+            assert rv.status_code == 200
             response = json.loads(rv.data.decode("utf-8"))
-            self.assertEqual(response["result"], ["b"])
+            assert response["result"] == ["b"]
 
     @pytest.mark.usefixtures("app_context", "virtual_dataset")
     def test_get_column_values_with_rls_no_values(self):
@@ -202,6 +201,58 @@ class TestDatasourceApi(SupersetTestCase):
             rv = self.client.get(
                 f"api/v1/datasource/table/{table.id}/column/col2/values/"
             )
-            self.assertEqual(rv.status_code, 200)
+            assert rv.status_code == 200
             response = json.loads(rv.data.decode("utf-8"))
-            self.assertEqual(response["result"], [])
+            assert response["result"] == []
+
+    @patch("superset.datasource.api.security_manager.can_access")
+    @patch("superset.datasource.api.GetCombinedDatasourceListCommand.run")
+    def test_combined_list_invalid_order_column(
+        self,
+        run_mock,
+        can_access_mock,
+    ):
+        security_manager.add_permission_view_menu("can_combined_list", "Datasource")
+        perm = security_manager.find_permission_view_menu(
+            "can_combined_list", "Datasource"
+        )
+        admin_role = security_manager.find_role("Admin")
+        security_manager.add_permission_role(admin_role, perm)
+        can_access_mock.side_effect = [True, True]
+        run_mock.side_effect = ValueError("Invalid order column: invalid")
+        self.login(ADMIN_USERNAME)
+
+        rv = self.client.get(
+            "api/v1/datasource/?q=(order_column:invalid,order_direction:desc,page:0,page_size:25)"
+        )
+
+        assert rv.status_code == 400
+        response = json.loads(rv.data.decode("utf-8"))
+        assert response["message"] == "Invalid order column: invalid"
+
+    @patch("superset.datasource.api.security_manager.can_access")
+    @patch("superset.datasource.api.GetCombinedDatasourceListCommand.run")
+    def test_combined_list_semantic_layers_off(
+        self,
+        run_mock,
+        can_access_mock,
+    ):
+        security_manager.add_permission_view_menu("can_combined_list", "Datasource")
+        perm = security_manager.find_permission_view_menu(
+            "can_combined_list", "Datasource"
+        )
+        admin_role = security_manager.find_role("Admin")
+        security_manager.add_permission_role(admin_role, perm)
+        can_access_mock.return_value = True
+        run_mock.return_value = {"count": 1, "result": []}
+        self.login(ADMIN_USERNAME)
+
+        with patch("superset.datasource.api.is_feature_enabled", return_value=False):
+            rv = self.client.get(
+                "api/v1/datasource/?q=(order_column:changed_on_delta_humanized,order_direction:desc,page:0,page_size:25)"
+            )
+
+        assert rv.status_code == 200
+        run_mock.assert_called_once()
+        _, kwargs = run_mock.call_args
+        assert kwargs == {}
