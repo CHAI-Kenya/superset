@@ -67,6 +67,25 @@ Copy `config.example.json` to `config.json` and adjust the values for your envir
 
 Configuration via environment variables is also supported which can be helpful in certain contexts, e.g., deployment. `src/config.ts` can be consulted to see the full list of supported values.
 
+### Restricting WebSocket origins
+
+To mitigate Cross-Site WebSocket Hijacking, set `allowedOrigins` (or the
+`ALLOWED_ORIGINS` environment variable, comma-separated) to the list of origins
+permitted to open WebSocket connections, e.g. the origin Superset is served
+from:
+
+```json
+{
+  "allowedOrigins": ["https://superset.example.com"]
+}
+```
+
+The `Origin` header of each upgrade request must exactly match one of the
+configured values. When `allowedOrigins` is empty (the default) the check is
+skipped and any origin is accepted; a single `"*"` entry explicitly allows any
+origin. Setting this is recommended for production deployments, especially when
+the JWT cookie uses `SameSite=None`.
+
 ## Superset Configuration
 
 Configure the Superset Flask app to enable global async queries (in `superset_config.py`):
@@ -91,13 +110,13 @@ Note also that `localhost` and `127.0.0.1` are not considered the same host. For
 The following config values must contain the same values in both the Flask app config and `config.json`:
 
 ```text
-GLOBAL_ASYNC_QUERIES_REDIS_CONFIG
+GLOBAL_ASYNC_QUERIES_CACHE_BACKEND
 GLOBAL_ASYNC_QUERIES_REDIS_STREAM_PREFIX
 GLOBAL_ASYNC_QUERIES_JWT_COOKIE_NAME
 GLOBAL_ASYNC_QUERIES_JWT_SECRET
 ```
 
-More info on Superset configuration values for async queries: https://github.com/apache/superset/blob/master/CONTRIBUTING.md#async-chart-queries
+More info on Superset configuration values for async queries: https://superset.apache.org/docs/contributing/misc#async-chart-queries
 
 ## StatsD monitoring
 
