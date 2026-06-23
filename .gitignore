@@ -47,6 +47,7 @@ app.db
 *.egg-info/
 changelog.sh
 dist
+docker/.env
 dump.rdb
 env
 venv*
