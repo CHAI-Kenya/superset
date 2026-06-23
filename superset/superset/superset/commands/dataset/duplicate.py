@@ -22,8 +22,10 @@ from flask_appbuilder.models.sqla import Model
 from flask_babel import gettext as __
 from marshmallow import ValidationError
 
+from superset import security_manager
 from superset.commands.base import BaseCommand, CreateMixin
 from superset.commands.dataset.exceptions import (
+    DatasetAccessDeniedError,
     DatasetDuplicateFailedError,
     DatasetExistsValidationError,
     DatasetInvalidError,
@@ -33,10 +35,10 @@ from superset.commands.exceptions import DatasourceTypeInvalidError
 from superset.connectors.sqla.models import SqlaTable, SqlMetric, TableColumn
 from superset.daos.dataset import DatasetDAO
 from superset.errors import ErrorLevel, SupersetError, SupersetErrorType
-from superset.exceptions import SupersetErrorException
+from superset.exceptions import SupersetErrorException, SupersetSecurityException
 from superset.extensions import db
 from superset.models.core import Database
-from superset.sql_parse import ParsedQuery, Table
+from superset.sql.parse import Table
 from superset.utils.decorators import on_error, transaction
 
 logger = logging.getLogger(__name__)
@@ -70,10 +72,7 @@ class DuplicateDatasetCommand(CreateMixin, BaseCommand):
         table.normalize_columns = self._base_model.normalize_columns
         table.always_filter_main_dttm = self._base_model.always_filter_main_dttm
         table.is_sqllab_view = True
-        table.sql = ParsedQuery(
-            self._base_model.sql,
-            engine=database.db_engine_spec.engine,
-        ).stripped()
+        table.sql = self._base_model.sql.strip().strip(";")
         db.session.add(table)
         cols = []
         for config_ in self._base_model.columns:
@@ -113,6 +112,10 @@ class DuplicateDatasetCommand(CreateMixin, BaseCommand):
         if not base_model:
             exceptions.append(DatasetNotFoundError())
         else:
+            try:
+                security_manager.raise_for_access(datasource=base_model)
+            except SupersetSecurityException as ex:
+                raise DatasetAccessDeniedError() from ex
             self._base_model = base_model
 
         if self._base_model and self._base_model.kind != "virtual":

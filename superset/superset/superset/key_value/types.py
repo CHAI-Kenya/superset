@@ -45,11 +45,17 @@ class KeyValueResource(StrEnum):
     EXPLORE_PERMALINK = "explore_permalink"
     METASTORE_CACHE = "superset_metastore_cache"
     LOCK = "lock"
+    PKCE_CODE_VERIFIER = "pkce_code_verifier"
+    SQLLAB_PERMALINK = "sqllab_permalink"
 
 
 class SharedKey(StrEnum):
     DASHBOARD_PERMALINK_SALT = "dashboard_permalink_salt"
     EXPLORE_PERMALINK_SALT = "explore_permalink_salt"
+    SQLLAB_PERMALINK_SALT = "sqllab_permalink_salt"
+    # Monotonically increasing version used to revoke outstanding guest tokens.
+    # Bumping it invalidates every guest token minted with a lower version.
+    GUEST_TOKEN_REVOCATION_VERSION = "guest_token_revocation_version"  # noqa: S105
 
 
 class KeyValueCodec(ABC):
@@ -79,7 +85,7 @@ class PickleKeyValueCodec(KeyValueCodec):
         return pickle.dumps(value)
 
     def decode(self, value: bytes) -> dict[Any, Any]:
-        return pickle.loads(value)
+        return pickle.loads(value)  # noqa: S301
 
 
 class MarshmallowKeyValueCodec(JsonKeyValueCodec):
